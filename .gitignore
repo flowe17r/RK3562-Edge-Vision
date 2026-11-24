@@ -1,0 +1,10 @@
+build*/
+*.o
+*.log
+
+rknn_cam
+rknn_yolov5_demo
+v4l2_capture
+v4l2_probe
+
+calib/

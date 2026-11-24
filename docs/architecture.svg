@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <style>
+    .t { font-family: "Noto Sans CJK SC","Microsoft YaHei",sans-serif; fill: #1f2937; }
+    .title { font-size: 24px; font-weight: 700; }
+    .sub { font-size: 14px; fill: #475569; }
+    .h { font-size: 16px; font-weight: 700; }
+    .b { font-size: 13px; }
+    .m { font-size: 12px; fill: #4b5563; }
+    .c { font-size: 12px; fill: #6b7280; }
+    .lane { font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 1px; }
+  </style>
+
+  <rect width="1280" height="640" fill="#ffffff"/>
+  <text x="30" y="42" class="t title">RK3562 端侧视觉终端 · 三线程流水线</text>
+  <text x="30" y="70" class="t sub">UVC 640×480 YUYV@30 → YOLOv5s INT8 640×640 → 800×1280 屏 + MJPEG · 16.5 fps · total p50 60.8 ms</text>
+
+  <text x="30" y="120" class="t lane">CAPTURE + PREPROCESS</text>
+  <text x="600" y="120" class="t lane">INFER + POSTPROCESS</text>
+  <text x="1000" y="120" class="t lane">DISPLAY + STREAM</text>
+
+  <!-- Camera -->
+  <rect x="30" y="150" width="150" height="190" rx="10" fill="#eaf7ea" stroke="#3a8a4d" stroke-width="1.5"/>
+  <text x="45" y="178" class="t h">USB UVC</text>
+  <text x="45" y="202" class="t b">0c45:64ab</text>
+  <text x="45" y="224" class="t b">640×480 YUYV@30</text>
+  <text x="45" y="246" class="t b">/dev/video18</text>
+  <text x="45" y="286" class="t m">V4L2 MMAP</text>
+  <text x="45" y="306" class="t m">4 buffers</text>
+
+  <!-- Stage 1 -->
+  <rect x="230" y="150" width="210" height="190" rx="10" fill="#eef4ff" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="245" y="178" class="t h">采集/预处理线程</text>
+  <text x="245" y="204" class="t b">YUYV → RGB（查表）</text>
+  <text x="245" y="226" class="t b">letterbox → 640×640</text>
+  <text x="245" y="248" class="t b">灰度填充，记录缩放比</text>
+  <text x="245" y="286" class="t m">conv p50 17.9 ms</text>
+  <text x="245" y="306" class="t m">p95 18.7 ms</text>
+
+  <!-- Queue 1 -->
+  <rect x="480" y="205" width="92" height="120" rx="10" fill="#fff4e0" stroke="#c98a1f" stroke-width="1.5"/>
+  <text x="526" y="233" class="t h" text-anchor="middle">槽位 ×3</text>
+  <text x="526" y="258" class="t m" text-anchor="middle">满则丢最旧</text>
+  <text x="526" y="282" class="t m" text-anchor="middle">RGB 帧</text>
+  <text x="526" y="306" class="t m" text-anchor="middle">640×640×3</text>
+
+  <!-- Stage 2 -->
+  <rect x="612" y="150" width="236" height="190" rx="10" fill="#eef4ff" stroke="#3b6ea5" stroke-width="1.5"/>
+  <text x="627" y="178" class="t h">推理线程</text>
+  <text x="627" y="204" class="t b">rknn_inputs_set / rknn_run</text>
+  <text x="627" y="226" class="t b">int8 + zp/scale 反量化</text>
+  <text x="627" y="248" class="t b">解码 80/40/20 + NMS 0.35/0.45</text>
+  <text x="627" y="270" class="t b">person IoU 跟踪 / 防抖</text>
+  <text x="627" y="300" class="t m">infer p50 50.6 ms · post p50 8.6 ms</text>
+
+  <!-- Queue 2 -->
+  <rect x="886" y="205" width="92" height="120" rx="10" fill="#fff4e0" stroke="#c98a1f" stroke-width="1.5"/>
+  <text x="932" y="233" class="t h" text-anchor="middle">槽位 ×3</text>
+  <text x="932" y="258" class="t m" text-anchor="middle">满则丢最旧</text>
+  <text x="932" y="282" class="t m" text-anchor="middle">检测结果</text>
+  <text x="932" y="306" class="t m" text-anchor="middle">+ 帧图像</text>
+
+  <!-- Stage 3 -->
+  <rect x="1018" y="150" width="232" height="190" rx="10" fill="#f3eefc" stroke="#6a4fa0" stroke-width="1.5"/>
+  <text x="1033" y="178" class="t h">输出线程</text>
+  <text x="1033" y="204" class="t b">缩放粘贴 + 画框/类别/置信度</text>
+  <text x="1033" y="226" class="t b">HUD: person N / total M</text>
+  <text x="1033" y="248" class="t b">写 /dev/fb0 800×1280</text>
+  <text x="1033" y="270" class="t b">turbojpeg → MJPEG :8081</text>
+  <text x="1033" y="300" class="t m">fb p50 20.4 ms（流水线摊掉）</text>
+
+  <!-- Arrows -->
+  <line x1="180" y1="245" x2="228" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="440" y1="245" x2="478" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="572" y1="245" x2="610" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="848" y1="245" x2="884" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="978" y1="245" x2="1016" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <text x="444" y="236" class="t c">RGB</text>
+  <text x="574" y="236" class="t c">入队</text>
+  <text x="850" y="236" class="t c">出队</text>
+
+  <!-- Aux row -->
+  <rect x="30" y="410" width="360" height="76" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="46" y="436" class="t h">上电自启（S99rknn_cam）</text>
+  <text x="46" y="458" class="t b">dmesg -n 1 → 停 QLauncher/weston → rknn_cam →</text>
+  <text x="46" y="476" class="t b">wpa_supplicant（关省电）+ udhcpc</text>
+
+  <rect x="418" y="410" width="250" height="76" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="434" y="436" class="t h">模型</text>
+  <text x="434" y="458" class="t b">yolov5s_int8_calib.rknn</text>
+  <text x="434" y="476" class="t m">7.64 MB · 200 帧重标定</text>
+
+  <rect x="696" y="410" width="270" height="76" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="712" y="436" class="t h">人数统计</text>
+  <text x="712" y="458" class="t b">命中 5 次确认 · miss 30 帧注销</text>
+  <text x="712" y="476" class="t b">3 s / 200 px 防抖 → count.log</text>
+
+  <rect x="994" y="410" width="256" height="76" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="1010" y="436" class="t h">离线评估模式</text>
+  <text x="1010" y="458" class="t b">calib/*.jpg → 同后处理</text>
+  <text x="1010" y="476" class="t b">eval_*.csv（逐帧 det/person/置信度）</text>
+
+  <line x1="543" y1="410" x2="543" y2="344" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+  <line x1="831" y1="410" x2="790" y2="344" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+  <line x1="1122" y1="410" x2="1122" y2="344" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+  <text x="30" y="540" class="t m">测点：600 帧相机链路，INT8-calib；infer 50.6 ms 占 total 的 83%，是当前瓶颈。416 输入与 RGA 前处理（板端 /dev/rga 已可用）为下一步优化。</text>
+  <text x="30" y="566" class="t c">源码：rknn_cam.cc（单文件流水线）· postprocess.cc（解码/NMS）· CMakeLists.txt + toolchain-aarch64.cmake</text>
+</svg>

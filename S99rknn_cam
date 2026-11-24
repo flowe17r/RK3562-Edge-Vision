@@ -1,0 +1,47 @@
+#!/bin/sh
+# Edge-vision demo boot: vendor UI down, rknn_cam to /dev/fb0, then WiFi up.
+dmesg -n 1
+
+case "$1" in
+  start)
+    echo "rknn_cam: stopping vendor ui"
+    /etc/init.d/S50launcher stop >/dev/null 2>&1
+    killall weston weston-desktop-shell 2>/dev/null
+    killall rknn_cam 2>/dev/null
+    sleep 1
+
+    i=0
+    while [ ! -e /dev/video18 ] && [ $i -lt 10 ]; do sleep 1; i=$((i+1)); done
+    echo "rknn_cam: launch"
+    cd /root/demo || exit 1
+    ./rknn_cam /dev/video18 model/yolov5s_int8_calib.rknn 0 0 /dev/fb0 >> /var/log/rknn_cam.log 2>&1 &
+
+    echo "rknn_cam: wifi"
+    ip link set wlan0 up
+    iw dev wlan0 set power_save off 2>/dev/null
+    killall wpa_supplicant 2>/dev/null
+    rm -f /var/run/wpa_supplicant/wlan0
+    wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf >/dev/null 2>&1
+    i=0
+    while [ $i -lt 30 ]; do
+      iw dev wlan0 link 2>/dev/null | grep -q "Connected to" && break
+      sleep 1
+      i=$((i+1))
+    done
+    iw dev wlan0 set power_save off 2>/dev/null
+    ip a show wlan0 2>/dev/null | grep -q "inet " || udhcpc -i wlan0 -q -n -t 5 >/dev/null 2>&1
+    ip a show wlan0 2>/dev/null | grep "inet " | sed 's/^ */wifi: /'
+    ;;
+  stop)
+    killall rknn_cam 2>/dev/null
+    ;;
+  restart)
+    "$0" stop
+    sleep 1
+    "$0" start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 3
+    ;;
+esac
